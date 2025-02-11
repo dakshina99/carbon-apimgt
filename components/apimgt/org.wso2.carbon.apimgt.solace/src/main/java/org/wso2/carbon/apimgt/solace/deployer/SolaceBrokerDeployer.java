@@ -15,6 +15,7 @@
  */
 package org.wso2.carbon.apimgt.solace.deployer;
 
+import com.google.gson.JsonObject;
 import io.apicurio.datamodels.Library;
 import io.apicurio.datamodels.asyncapi.v2.models.Aai20Document;
 import org.apache.commons.logging.Log;
@@ -343,11 +344,11 @@ public class SolaceBrokerDeployer implements ExternalGatewayDeployer {
     /**
      * This method returns the Gateway Feature Catalog
      *
-     * @return JSON String Gateway Feature Catalog
+     * @return JSON Object Gateway Feature Catalog
      */
     @Override
-    public String getGatewayFeatureCatalog() {
-        return "";
+    public JsonObject getGatewayFeatureCatalog() {
+        return null;
     }
 
     /**
