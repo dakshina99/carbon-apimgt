@@ -62,6 +62,8 @@ import org.wso2.carbon.apimgt.api.APIProvider;
 import org.wso2.carbon.apimgt.api.ErrorHandler;
 import org.wso2.carbon.apimgt.api.ExceptionCodes;
 import org.wso2.carbon.apimgt.api.FaultGatewaysException;
+import org.wso2.carbon.apimgt.api.FileSizeLimitExceededException;
+import org.wso2.carbon.apimgt.api.SizeLimitedInputStream;
 import org.wso2.carbon.apimgt.api.TokenBasedThrottlingCountHolder;
 import org.wso2.carbon.apimgt.api.UsedByMigrationClient;
 import org.wso2.carbon.apimgt.api.doc.model.APIResource;
@@ -3575,7 +3577,23 @@ public class PublisherCommonUtils {
             HttpResponse response = httpClient.execute(httpGet);
 
             if (HttpStatus.SC_OK == response.getStatusLine().getStatusCode()) {
-                schema = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+                String maxFileSizeStr = ServiceReferenceHolder.getInstance().getAPIManagerConfiguration()
+                        .getFirstProperty(
+                                org.wso2.carbon.apimgt.api.APIConstants.API_PUBLISHER_IMPORT_GRAPHQL_FILE_SIZE_LIMIT);
+                long maxFileSize = Long.parseLong(maxFileSizeStr) * 1024L * 1024L;
+                try (SizeLimitedInputStream sizeLimitedInputStream = new SizeLimitedInputStream(
+                        response.getEntity().getContent(), maxFileSize)) {
+                    schema = IOUtils.toString(sizeLimitedInputStream, StandardCharsets.UTF_8);
+                } catch (FileSizeLimitExceededException ex) {
+                    log.error(
+                            "The GraphQL schema obtained from the URL exceeds the maximum allowed size of "
+                                    + maxFileSizeStr + " MB. Error: ",
+                            ex);
+                    throw new APIManagementException(
+                            "The GraphQL schema obtained from the URL exceeds the " + "maximum allowed size of "
+                                    + maxFileSizeStr + " MB.",
+                            ExceptionCodes.FILE_TOO_LARGE);
+                }
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug(
